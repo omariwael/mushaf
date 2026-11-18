@@ -26,6 +26,12 @@ LAYOUT: one page per screen, chrome appears on tap, bottom sheet for tafsir, sid
 @font-face{font-family:UI;src:url(f/ui-m.woff2) format("woff2");font-weight:500 700;font-display:swap}
 @font-face{font-family:UI;src:url(f/ui-l.woff2) format("woff2");unicode-range:U+0000-00FF,U+2000-206F;font-display:swap}
 @font-face{font-family:BSML;src:url(f/bsml.woff2) format("woff2")}
+@font-face{font-family:QB;src:url(f/qb.woff2) format("woff2");font-display:block}
+.eds{display:grid;gap:10px;padding:6px 8px}
+.ed{display:flex;gap:12px;align-items:center;text-align:start;border:1px solid var(--line);border-radius:14px;padding:10px 12px;width:100%}
+.ed[aria-pressed=true]{border-color:var(--green);box-shadow:inset 0 0 0 1px var(--green);background:var(--bm)}
+.ed b{display:block;font:700 18px Amiri,serif}.ed small{color:var(--mute);font-size:12.5px;line-height:1.5;display:block}
+.ed i{flex:0 0 46px;height:46px;border-radius:10px;display:grid;place-items:center;font:700 13px UI,sans-serif;font-style:normal;background:var(--bg);color:var(--green)}
 :root{color-scheme:light dark;
 --bg:light-dark(#efe9db,#0b100e);--paper:light-dark(#fffdf6,#141a17);--ink:light-dark(#1b1813,#ebe4d2);
 --mute:light-dark(#7a7262,#9a9384);--line:light-dark(#e3dac4,#26302b);
@@ -60,8 +66,8 @@ svg.i{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:1.7;stro
 .w.sel{background:var(--sel)}
 .hd{display:grid;place-items:center;position:relative}
 .hd svg{position:absolute;inset:0;width:100%;height:100%}
-.hd b{position:relative;font-family:Amiri,serif;font-weight:700;color:var(--green)}
-.bs{display:grid;place-items:center;font-family:BSML;direction:ltr;unicode-bidi:bidi-override}
+.hd b{position:relative;font-family:QB,Amiri,serif;font-weight:400;color:var(--green);direction:ltr;unicode-bidi:bidi-override;line-height:1}
+.bs{display:grid;place-items:center;font-family:BSML;direction:ltr;unicode-bidi:bidi-override}.bs.q4{font-family:QB}
 .ribbon{position:absolute;top:-4px;left:22px;width:16px;height:40px;background:var(--gold);clip-path:polygon(0 0,100% 0,100% 100%,50% 78%,0 100%);opacity:0;transform:translateY(-8px);transition:.25s;pointer-events:none}
 .pg.on .ribbon{opacity:1;transform:none}
 .ld{color:var(--mute);font-size:14px}
@@ -172,6 +178,8 @@ body.imm #top{transform:translateY(-110%)}body.imm #bot{transform:translateY(110
 .ck{display:flex;align-items:center;gap:8px;font-size:14.5px;margin-top:8px;min-height:44px}
 .ck input{width:20px;height:20px;accent-color:var(--green)}
 #shI{display:block;width:100%;border-radius:12px;margin-top:12px;box-shadow:0 4px 20px var(--shadow)}
+.ed-v4t .pg{--paper:#fffdf6;--ink:#1b1813;--mute:#7a7262;--green:#0e4a3a;--gold:#a37a2c;--line:#e3dac4;--bm:rgba(14,74,58,.12);--sel:rgba(163,122,44,.2);--play:rgba(14,74,58,.16)}
+.ed-v4t #atext{background:#fffdf6;color:#1b1813;border-radius:14px;margin:4px 12px 0;border:0}
 @media(prefers-reduced-motion:reduce){*{transition:none!important;scroll-behavior:auto!important}}
 </style>
 </head>
@@ -222,6 +230,7 @@ body.imm #top{transform:translateY(-110%)}body.imm #bot{transform:translateY(110
   <button class="tab" data-v="s" aria-selected="true">السور</button>
   <button class="tab" data-v="j" aria-selected="false">الأجزاء</button>
   <button class="tab" data-v="b" aria-selected="false">العلامات</button>
+  <button class="tab" data-v="x" aria-selected="false">خط المصحف</button>
  </div>
  <form class="srch" id="sf"><input id="q" type="search" placeholder="ابحث عن سورة" autocomplete="off"><input id="gp" type="number" inputmode="numeric" min="1" max="604" placeholder="صفحة"><button>اذهب</button></form>
  <button id="dl"></button>
@@ -308,11 +317,15 @@ function hizbOf(p){let q=0;M.q.forEach((x,i)=>{if(x.p<=p)q=i});const h=Math.floo
 function surahOfPage(p){const pg=P[p-1];for(const l of pg)if(Array.isArray(l[0]))return l[0][0];let s=1;M.s.forEach((x,i)=>{if(x.p<=p)s=i+1});return s}
 function surahsOnPage(p){const set=[];P[p-1].forEach(l=>{if(Array.isArray(l[0]))l.forEach(w=>{if(!set.includes(w[0]))set.push(w[0])})});return set}
 const chunkP=new Map();
-function chunk(c){if(!chunkP.has(c))chunkP.set(c,fetch('f/c'+c+'.woff2').then(r=>{if(!r.ok)throw 0;return r.arrayBuffer()}).catch(e=>{chunkP.delete(c);throw e}));return chunkP.get(c)}
-function loadFont(n){if(!fontP.has(n)){const c=Math.floor((n-1)/8),i=(n-1)%8;
- fontP.set(n,chunk(c).then(buf=>{const v=new DataView(buf),k=v.getUint32(0,true);let off=4+4*k;for(let j=0;j<i;j++)off+=v.getUint32(4+4*j,true);
-  const f=new FontFace('p'+n,buf.slice(off,off+v.getUint32(4+4*i,true)));return f.load()}).then(x=>{document.fonts.add(x);return x}).catch(()=>{fontP.delete(n);return null}))}
- return fontP.get(n)}
+const EDS={v1:{d:'f',pg:'d/pages.json',n:'مصحف المدينة ١٤٠٥هـ',t:'الطبعة الأولى بخط عثمان طه، كما في مصاحف الطبعات القديمة.',i:'١٤٠٥'},
+ v4:{d:'f4',pg:'d/pages4.json',n:'مصحف المدينة ١٤٤١هـ',t:'الطبعة الأحدث: حروف وتشكيل أدق، وعلامات آيات محدّثة.',i:'١٤٤١'},
+ v4t:{d:'f4t',pg:'d/pages4.json',n:'مصحف التجويد ١٤٤١هـ',t:'الطبعة الأحدث ملوّنة بأحكام التجويد.',i:'تجويد'}};
+let ED=EDS[ST.ed]?ST.ed:'v1';const fam=n=>ED+'p'+n;document.body.classList.add('ed-'+ED);
+function chunk(c){const key=ED+c;if(!chunkP.has(key))chunkP.set(key,fetch(EDS[ED].d+'/c'+c+'.woff2').then(r=>{if(!r.ok)throw 0;return r.arrayBuffer()}).catch(e=>{chunkP.delete(key);throw e}));return chunkP.get(key)}
+function loadFont(n){const fk=ED+n;if(!fontP.has(fk)){const c=Math.floor((n-1)/8),i=(n-1)%8,fm=fam(n);
+ fontP.set(fk,chunk(c).then(buf=>{const v=new DataView(buf),k=v.getUint32(0,true);let off=4+4*k;for(let j=0;j<i;j++)off+=v.getUint32(4+4*j,true);
+  const f=new FontFace(fm,buf.slice(off,off+v.getUint32(4+4*i,true)));return f.load()}).then(x=>{document.fonts.add(x);return x}).catch(()=>{fontP.delete(fk);return null}))}
+ return fontP.get(fk)}
 let toastT;function toast(t){const e=$('#toast');e.textContent=t;e.classList.add('on');clearTimeout(toastT);toastT=setTimeout(()=>e.classList.remove('on'),1800)}
 const isBmP=p=>ST.b.some(b=>b.t=='p'&&b.p==p);
 const isBmA=(s,a)=>ST.b.some(b=>b.t=='a'&&b.s==s&&b.a==a);
@@ -330,17 +343,17 @@ async function render(n){
  // page box: mushaf proportion ~ 0.64 (w/h) bounded by screen
  let ph=H,pw=W<700?W:Math.min(W,H*0.68);
  const innerW=pw-36,innerH=ph-56-24;
- cv.font='100px p'+n;let maxW=0;const lw=new Map();
+ cv.font='100px '+fam(n);let maxW=0;const lw=new Map();
  pg.forEach(l=>{if(Array.isArray(l[0])){let w=0;l.forEach(x=>w+=cv.measureText(x[2]).width);lw.set(l,w);if(first)w+=l.length*25;maxW=Math.max(maxW,w)}});
  const target=first?innerW*0.7:innerW;
  let fs=Math.min(100*target/(maxW*1.02),innerH/(rows*1.55));
  const rowH=first?fs*2.1:innerH/rows;
  const sn=surahOfPage(n);
  let h=`<div class="pg${isBmP(n)?' on':''}" style="width:${pw}px;height:${ph}px;padding:14px 18px 10px"><div class="ribbon"></div>
- <div class="mh"><span>سورة ${M.s[sn-1].n}</span><span>الجزء ${ar(juzOf(n))}</span></div><div class="body${first?' c':''}" style="font-family:p${n};font-size:${fs}px">`;
+ <div class="mh"><span>سورة ${M.s[sn-1].n}</span><span>الجزء ${ar(juzOf(n))}</span></div><div class="body${first?' c':''}" style="font-family:${fam(n)};font-size:${fs}px">`;
  pg.forEach(l=>{
-  if(l[0]==='h')h+=`<div class="hd" style="height:${rowH}px;margin-inline:${first?innerW*.12:0}px">${frame()}<b style="font-size:${Math.min(rowH*.5,fs*0.85)}px">سورة ${M.s[l[1]-1].n}</b></div>`;
-  else if(l[0]==='b')h+=`<div class="bs" style="height:${rowH}px;font-size:${fs*0.95}px">&#x23;&#x22;&#x21;</div>`;
+  if(l[0]==='h')h+=`<div class="hd" style="height:${rowH}px;margin-inline:${first?innerW*.12:0}px">${frame()}<b style="font-size:${Math.min(rowH*.78,fs*1.3)}px" aria-label="سورة ${M.s[l[1]-1].n}">&#x${(0xF0FF+l[1]).toString(16)};</b></div>`;
+  else if(l[0]==='b')h+=`${ED==='v1'?`<div class="bs" style="height:${rowH}px;font-size:${fs*0.95}px">&#x23;&#x22;&#x21;</div>`:`<div class="bs q4" style="height:${rowH}px;font-size:${fs*1.05}px" aria-label="بسم الله الرحمن الرحيم">&#xFAD8;&#xFAD7;&#xFAD6;&#xFAD5;</div>`}`;
   else{const sh=!first&&lw.get(l)<maxW*0.72;h+=`<div class="ln" style="height:${rowH}px${first||sh?';gap:'+fs*.28+'px;justify-content:center':''}">`;
    l.forEach(w=>{const k=w[0]+':'+w[1];h+=`<span class="w${isBmA(w[0],w[1])?' bm':''}${sel===k?' sel':''}${PL.on&&PL.k===k?' play':''}" data-k="${k}">${w[2]}</span>`});h+='</div>'}
  });
@@ -382,7 +395,7 @@ async function openAyah(k){selKey(k);const[s,a]=k.split(':').map(Number);
  $('#aT').innerHTML=`سورة ${M.s[s-1].n}<small>الآية ${ar(a)}</small>`;
  $('#abm').classList.toggle('on',isBmA(s,a));
  const ws=AW.get(k);await Promise.all([...new Set(ws.map(w=>w[0]))].map(loadFont));
- $('#atext').innerHTML=ws.map(w=>`<span style="font-family:p${w[0]}">${w[1]}</span>`).join(' ');
+ $('#atext').innerHTML=ws.map(w=>`<span style="font-family:${fam(w[0])}">${w[1]}</span>`).join(' ');
  $('#sheet').classList.add('on');document.body.classList.add('sho');$('#sheet').setAttribute('aria-hidden','false');$('#scrim').classList.add('on');
  const p=ws[0][0];if(p!==cur)goTo(p);
  showTafsir()}
@@ -417,6 +430,7 @@ function renderList(){const L=$('#list'),q=norm($('#q').value.trim());let h='';
   M.s.forEach((x,i)=>{if(q&&!norm(x.n).includes(q)&&!String(i+1).startsWith(q)&&!x.e.toLowerCase().includes(q.toLowerCase()))return;
    h+=`<button class="it${i+1===cs?' cur':''}" data-p="${x.p}"><span class="med">${ar(i+1)}</span><span class="nm"><b>${x.n}</b><small>${x.r==='m'?'مكية':'مدنية'} · ${ar(x.v)} آية</small></span><span class="pp">${ar(x.p)}</span></button>`});
   if(!h)h='<p class="empty">لا توجد سورة بهذا الاسم.</p>'}
+ else if(dv==='x'){h='<div class="sec">اختر إصدار خط المصحف</div><div class="eds">'+Object.entries(EDS).map(([k,e])=>`<button class="ed" data-ed="${k}" aria-pressed="${k===ED}"><i>${e.i}</i><span><b>${e.n}</b><small>${e.t}</small></span></button>`).join('')+'</div><p class="note" style="padding:4px 10px">يُحمَّل خط كل صفحة عند فتحها. لاستخدام الإصدار دون إنترنت نزّله من الزر أعلى الفهرس.</p>'}
  else if(dv==='j'){const cj=juzOf(cur);M.j.forEach((x,i)=>{h+=`<button class="it${i+1===cj?' cur':''}" data-p="${x.p}"><span class="med">${ar(i+1)}</span><span class="nm"><b>الجزء ${ar(i+1)}</b><small>يبدأ من سورة ${M.s[x.s-1].n} · الآية ${ar(x.a)}</small></span><span class="pp">${ar(x.p)}</span></button>`})}
  else{const bs=[...ST.b].sort((a,b)=>b.ts-a.ts),ps=bs.filter(b=>b.t=='p'),as=bs.filter(b=>b.t=='a');
   if(!bs.length)h='<p class="empty">لا توجد علامات بعد.<br>اضغط رمز العلامة أعلى الشاشة لحفظ الصفحة، أو اضغط على أي آية ثم «علامة» لحفظ الآية.</p>';
@@ -427,7 +441,8 @@ function renderList(){const L=$('#list'),q=norm($('#q').value.trim());let h='';
 function openDrawer(){renderList();$('#drawer').classList.add('on');$('#drawer').setAttribute('aria-hidden','false');$('#scrim').classList.add('on')}
 function closeDrawer(){$('#drawer').classList.remove('on');$('#drawer').setAttribute('aria-hidden','true');if(!$('#sheet').classList.contains('on'))$('#scrim').classList.remove('on')}
 $('#dtabs').onclick=e=>{const b=e.target.closest('.tab');if(!b)return;dv=b.dataset.v;document.querySelectorAll('#dtabs .tab').forEach(x=>x.setAttribute('aria-selected',x===b));$('#q').style.display=dv==='s'?'':'none';renderList()};
-$('#list').onclick=e=>{const del=e.target.closest('[data-del]');
+$('#list').onclick=e=>{const ed=e.target.closest('[data-ed]');if(ed){setEdition(ed.dataset.ed);return}
+ const del=e.target.closest('[data-del]');
  if(del){const[t,x,y]=del.dataset.del.split(':').map((v,i)=>i?+v:v);ST.b=ST.b.filter(b=>!(b.t===t&&(t==='p'?b.p===x:b.s===x&&b.a===y)));save();markBm();renderList();return}
  const it=e.target.closest('[data-p]');if(!it)return;closeDrawer();goTo(+it.dataset.p);
  if(it.dataset.k)setTimeout(()=>openAyah(it.dataset.k),250)};
@@ -487,11 +502,11 @@ async function makeCard(k){const[s,a]=k.split(':').map(Number),ws=AW.get(k);
  g.fillStyle='#a37a2c';g.fillRect(W/2-90,200,180,2);
  const L=110,R=W-110,top=260,bot=H-200;let fs=120,lines,lh;
  for(;fs>=26;fs-=3){lines=[];let ln=[],lw=0;const gap=fs*.32;
-  for(const w of ws){g.font=`${fs}px p${w[0]}`;const ww=g.measureText(w[1]).width;
+  for(const w of ws){g.font=`${fs}px ${fam(w[0])}`;const ww=g.measureText(w[1]).width;
    if(ln.length&&lw+gap+ww>R-L){lines.push([ln,lw]);ln=[];lw=0}lw+=(ln.length?gap:0)+ww;ln.push([w,ww])}
   if(ln.length)lines.push([ln,lw]);lh=fs*1.95;if(lines.length*lh<=bot-top)break}
  let y=top+((bot-top)-lines.length*lh)/2+lh*.62;g.fillStyle='#1b1813';g.textAlign='left';g.direction='ltr';
- for(const[ln,lw]of lines){let x=W/2+lw/2;const gap=fs*.32;for(const[w,ww]of ln){x-=ww;g.font=`${fs}px p${w[0]}`;g.fillText(w[1],x,y);x-=gap}y+=lh}
+ for(const[ln,lw]of lines){let x=W/2+lw/2;const gap=fs*.32;for(const[w,ww]of ln){x-=ww;g.font=`${fs}px ${fam(w[0])}`;g.fillText(w[1],x,y);x-=gap}y+=lh}
  g.direction='rtl';g.textAlign='center';g.fillStyle='#7a7262';g.font='700 30px Amiri, serif';g.fillText('الآية '+ar(a),W/2,H-128);
  return new Promise(r=>c.toBlob(r,'image/png'))}
 $('#shG').onclick=async()=>{if(!shK)return;$('#shH').textContent='جارٍ تجهيز الصورة…';
@@ -579,21 +594,32 @@ $('#dlA').onclick=async()=>{if(dlBusy)return;if(!('caches' in window)||!navigato
  else toast('تعذّر تنزيل '+ar(bad)+' آية — أعد المحاولة');dlUI()};
 
 /* ---------- offline (installed app only) ---------- */
+function offUI(){const b=$('#dl');if(!b||b.style.display!=='block'||b.dataset.busy)return;
+ b.textContent=localStorage.getItem('mushaf-offline-2-'+ED)?`${EDS[ED].n} والتفاسير محفوظة للقراءة دون إنترنت`:`تنزيل ${EDS[ED].n} والتفاسير للقراءة دون إنترنت`}
 async function setupSW(){if(!('serviceWorker' in navigator))return;
- try{const r=await navigator.serviceWorker.register('sw.js');await navigator.serviceWorker.ready;
-  const b=$('#dl');b.style.display='block';const done=localStorage.getItem('mushaf-offline-2');
-  b.textContent=done?'المصحف والتفاسير محفوظة على الجهاز للقراءة دون إنترنت':'تنزيل المصحف والتفاسير للقراءة دون إنترنت';
-  b.onclick=async()=>{const urls=[];for(let i=0;i<76;i++)urls.push('f/c'+i+'.woff2');for(let i=1;i<=114;i++){urls.push('d/t/'+i+'.json','d/k/'+i+'.json')}
-   const c=await caches.open('mushaf-data-v2');let n=0;
-   for(let i=0;i<urls.length;i+=8){await Promise.all(urls.slice(i,i+8).map(async u=>{if(!(await c.match(u)))try{await c.add(u)}catch(e){}}));n=Math.min(urls.length,i+8);b.textContent='جارٍ التنزيل… '+ar(Math.round(n/urls.length*100))+'٪'}
-   localStorage.setItem('mushaf-offline-2','1');b.textContent='المصحف والتفاسير محفوظة على الجهاز للقراءة دون إنترنت'}
+ try{await navigator.serviceWorker.register('sw.js');await navigator.serviceWorker.ready;
+  const b=$('#dl');b.style.display='block';offUI();
+  b.onclick=async()=>{if(b.dataset.busy)return;const ed=ED,d=EDS[ed].d,urls=[EDS[ed].pg];for(let i=0;i<76;i++)urls.push(d+'/c'+i+'.woff2');
+   for(let i=1;i<=114;i++)urls.push('d/t/'+i+'.json','d/k/'+i+'.json');
+   b.dataset.busy='1';const c=await caches.open('mushaf-data-v2');let n=0,bad=0;
+   for(let i=0;i<urls.length;i+=8){await Promise.all(urls.slice(i,i+8).map(async u=>{if(await c.match(u))return;try{await c.add(u)}catch(e){bad++}}));
+    n=Math.min(urls.length,i+8);b.textContent='جارٍ التنزيل… '+ar(Math.round(n/urls.length*100))+'٪'}
+   delete b.dataset.busy;if(!bad)localStorage.setItem('mushaf-offline-2-'+ed,'1');else toast('لم يكتمل التنزيل — أعد المحاولة');offUI()}
  }catch(e){}}
 
+function buildAW(){AW.clear();P.forEach((pg,i)=>pg.forEach(l=>{if(Array.isArray(l[0]))l.forEach(w=>{const k=w[0]+':'+w[1];if(!AW.has(k))AW.set(k,[]);AW.get(k).push([i+1,w[2]])})}))}
+let edBusy=false;
+async function setEdition(k){if(k===ED||edBusy||!EDS[k])return;edBusy=true;
+ const prev=ED;document.querySelectorAll('.ed').forEach(b=>b.setAttribute('aria-pressed',b.dataset.ed===k));
+ try{const np=EDS[k].pg===EDS[ED].pg?P:await fetch(EDS[k].pg).then(r=>{if(!r.ok)throw 0;return r.json()});
+  ED=k;P=np;buildAW();const ok=await loadFont(cur);if(!ok)throw 0}
+ catch(e){ED=prev;edBusy=false;renderList();toast('تعذّر تحميل الخط — تحقّق من الاتصال');return}
+ ST.ed=k;save();document.body.classList.remove('ed-'+prev);document.body.classList.add('ed-'+k);rerenderAll();edBusy=false;offUI();toast('تم التبديل إلى '+EDS[k].n)}
 /* ---------- boot ---------- */
 (async()=>{
- try{[M,P]=await Promise.all([fetch('d/meta.json').then(r=>r.json()),fetch('d/pages.json').then(r=>r.json())])}
+ try{[M,P]=await Promise.all([fetch('d/meta.json').then(r=>r.json()),fetch(EDS[ED].pg).then(r=>r.json())])}
  catch(e){$('#spm').textContent='تعذّر تحميل المصحف. أعد فتح الصفحة.';return}
- P.forEach((pg,i)=>pg.forEach(l=>{if(Array.isArray(l[0]))l.forEach(w=>{const k=w[0]+':'+w[1];if(!AW.has(k))AW.set(k,[]);AW.get(k).push([i+1,w[2]])})}));
+ buildAW();
  rail.innerHTML=Array.from({length:604},(_,i)=>`<div class="slot" data-p="${i+1}"></div>`).join('');
  [...rail.children].forEach(s=>io.observe(s));
  const m=/^#page-(\d+)$/.exec(location.hash);const start=m?+m[1]:(ST.last||1);
